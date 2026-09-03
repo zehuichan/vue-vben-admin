@@ -45,11 +45,52 @@ function fetchApi() {
 </template>
 ```
 
+## Binding label and value together
+
+When a control needs to keep both the option id and its display text (value stores the id, label stores the text), `ApiComponent` provides `v-model:label` alongside the primary model:
+
+- picking an option looks the text up in the loaded options and emits `update:label`
+- clearing the value clears the label as well
+- while the options are still loading (for example when a detail view only returns an id and a text), the incoming label is used as a fallback option so the control renders the text instead of a raw id; once the options arrive, the label is refreshed from them
+- for multi-select components the label mirrors the value and is an array as well
+
+```vue
+<script lang="ts" setup>
+import { ref } from 'vue';
+
+import { ApiComponent } from '@vben/common-ui';
+
+import { Select } from 'antdv-next';
+
+const clientId = ref('C-9999');
+const clientName = ref('Archived client');
+
+function fetchClients() {
+  return Promise.resolve([{ id: 'C-1001', name: 'Hangzhou Trading Co.' }]);
+}
+</script>
+
+<template>
+  <ApiComponent
+    v-model:value="clientId"
+    v-model:label="clientName"
+    :api="fetchClients"
+    :component="Select"
+    label-field="name"
+    model-prop-name="value"
+    value-field="id"
+  />
+</template>
+```
+
+Inside a form there is no need to wire `onUpdate:label` by hand — declare the schema `fieldName` as an array instead, see [binding several fields to one control](./vben-form#binding-several-fields-to-one-control).
+
 ## Current Props
 
 | Prop | Description | Type |
 | --- | --- | --- |
 | `component` | wrapped target component | `Component` |
+| `label` (`v-model:label`) | display text of the current value | `any` |
 | `api` | remote request function | `(arg?: any) => Promise<any>` |
 | `params` | extra request params | `Record<string, any>` |
 | `beforeFetch` | hook before request | `AnyPromiseFunction` |
@@ -67,3 +108,4 @@ function fetchApi() {
 | `updateParam(newParams)` | merges and updates request params      |
 | `getOptions()`           | returns loaded options                 |
 | `getValue()`             | returns the current bound value        |
+| `getLabel()`             | returns the display text of the value  |

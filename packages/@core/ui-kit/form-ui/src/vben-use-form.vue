@@ -14,6 +14,7 @@ import {
   COMPONENT_MAP,
   DEFAULT_FORM_COMMON_CONFIG,
 } from './config';
+import { resolveFieldNameList } from './field-name';
 import { Form } from './form-render';
 import {
   provideComponentRefMap,
@@ -92,7 +93,10 @@ watch(values, (currentValues, previousValues) => {
   if (!handleValuesChange && !submitOnChange) {
     return;
   }
-  const fields = state?.value.schema?.map((item) => item.fieldName) ?? [];
+  const fields =
+    state?.value.schema?.flatMap((item) =>
+      resolveFieldNameList(item.fieldName),
+    ) ?? [];
   if (handleValuesChange && fields.length > 0) {
     const changedFields = fields.filter((field) => {
       return !isEqual(

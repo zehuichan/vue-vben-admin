@@ -123,6 +123,47 @@ function fetchApi(): Promise<Record<string, any>> {
 
 :::
 
+## 同时绑定 label 和 value
+
+需要同时提交选项的 id 和展示文本时（value 存 id，label 存文本），`ApiComponent` 提供了 `v-model:label`，与主模型一起双向绑定：
+
+- 选中某个选项后，会从已加载的选项中反查文本并触发 `update:label`
+- 清空当前值时，label 一并清空
+- 选项尚未加载完成时（例如详情回显先拿到 id 和文本），外部传入的 label 会作为兜底选项参与回显，界面显示文本而不是裸 id；选项加载完成后，label 会按选项中的最新文本自动纠正
+- 多选组件下，label 会与 value 一一对应，同为数组
+
+```vue
+<script lang="ts" setup>
+import { ref } from 'vue';
+
+import { ApiComponent } from '@vben/common-ui';
+
+import { Select } from 'antdv-next';
+
+// 详情回显：接口只返回 id 和文本，选项里可能已经没有这个 id
+const clientId = ref('C-9999');
+const clientName = ref('已停用的历史客户');
+
+function fetchClients() {
+  return Promise.resolve([{ id: 'C-1001', name: '杭州西湖贸易有限公司' }]);
+}
+</script>
+
+<template>
+  <ApiComponent
+    v-model:value="clientId"
+    v-model:label="clientName"
+    :api="fetchClients"
+    :component="Select"
+    label-field="name"
+    model-prop-name="value"
+    value-field="id"
+  />
+</template>
+```
+
+在表单中使用时，不需要手工监听 `onUpdate:label`，把 schema 的 `fieldName` 写成数组即可，详见 [VbenForm 的一个控件绑定多个字段](./vben-form#一个控件绑定多个字段)。
+
 ## 并发和缓存
 
 有些场景下可能需要使用多个ApiComponent，它们使用了相同的远程数据源（例如用在可编辑的表格中）。如果直接将请求后端接口的函数传递给api属性，则每一个实例都会访问一次接口，这会造成资源浪费，是完全没有必要的。Tanstack Query提供了并发控制、缓存、重试等诸多特性，我们可以将接口请求函数用useQuery包装一下再传递给ApiComponent，这样的话无论页面有多少个使用相同数据源的ApiComponent实例，都只会发起一次远程请求。演示效果请参考 [Playground vue-query](https://www.vben.pro/#/demos/features/vue-query)，具体代码请查看项目文件[concurrency-caching](https://github.com/vbenjs/vue-vben-admin/blob/main/playground/src/views/demos/features/vue-query/concurrency-caching.vue)
@@ -134,6 +175,7 @@ function fetchApi(): Promise<Record<string, any>> {
 | 属性名 | 描述 | 类型 | 默认值 | 版本要求 |
 | --- | --- | --- | --- | --- |
 | modelValue(v-model) | 当前值 | `any` | - | - |
+| label(v-model:label) | 当前值对应的展示文本。选中/清空时与当前值一起变更；选项未加载时作为兜底选项回显 | `any` | - | - |
 | component | 欲包装的组件（以下称为目标组件） | `Component` | - | - |
 | numberToString | 是否将value从数字转为string | `boolean` | `false` | - |
 | api | 获取数据的函数 | `(arg?: any) => Promise<OptionsItem[] \| Record<string, any>>` | - | - |
@@ -171,3 +213,4 @@ function fetchApi(): Promise<Record<string, any>> {
 | updateParam | 设置接口请求参数（将与params属性合并） | (newParams: Record<string, any>)=>void | >5.5.4 |
 | getOptions | 获取已加载的选项数据 | ()=>OptionsItem[] | >5.5.4 |
 | getValue | 获取当前值 | ()=>any | >5.5.4 |
+| getLabel | 获取当前值对应的展示文本 | ()=>any | - |

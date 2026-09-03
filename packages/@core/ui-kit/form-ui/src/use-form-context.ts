@@ -12,6 +12,7 @@ import { isString, mergeWithArrayOverride, set } from '@vben-core/shared/utils';
 import { object, ZodIntersection, ZodNumber, ZodObject, ZodString } from 'zod';
 import { getDefaultsForSchema } from 'zod-defaults';
 
+import { resolvePrimaryFieldName } from './field-name';
 import { useFormRuntime } from './form-runtime';
 
 type ExtendFormProps = VbenFormProps & {
@@ -50,15 +51,17 @@ export function useFormInitial(
 
     const zodObject: Record<string, ZodType> = {};
     (unref(props).schema || []).forEach((item) => {
+      // 一个控件绑定多个字段时，默认值与校验规则都归属主字段
+      const fieldName = resolvePrimaryFieldName(item.fieldName);
       if (Reflect.has(item, 'defaultValue')) {
-        set(initialValues, item.fieldName, item.defaultValue);
+        set(initialValues, fieldName, item.defaultValue);
       } else if (item.rules && !isString(item.rules)) {
         // 检查规则是否适合提取默认值
         const rawRules = toRaw(item.rules);
         const customDefaultValue = getCustomDefaultValue(rawRules);
-        zodObject[item.fieldName] = rawRules;
+        zodObject[fieldName] = rawRules;
         if (customDefaultValue !== undefined) {
-          initialValues[item.fieldName] = customDefaultValue;
+          initialValues[fieldName] = customDefaultValue;
         }
       }
     });

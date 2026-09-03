@@ -30,7 +30,8 @@
     "crop-image": "裁剪圖片",
     "upload-image": "點選上傳圖片",
     "collapsible": "單項表單摺疊",
-    "labelWidth": "Label 自動寬度"
+    "labelWidth": "Label 自動寬度",
+    "labelValue": "Label + Value 綁定"
   },
   "vxeTable": {
     "title": "Vxe 表格",

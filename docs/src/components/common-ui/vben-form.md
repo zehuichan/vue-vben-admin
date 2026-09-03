@@ -594,10 +594,11 @@ export interface FormCommonConfig {
    */
   labelWidth?: number | string;
   /**
-   * 所有表单项的model属性名。使用自定义组件时可通过此配置指定组件的model属性名。已经在modelPropNameMap中注册的组件不受此配置影响
+   * 所有表单项的model属性名。使用自定义组件时可通过此配置指定组件的model属性名。已经在modelPropNameMap中注册的组件不受此配置影响。
+   * 传数组时按 `fieldName` 数组的顺序一一对应
    * @default "modelValue"
    */
-  modelPropName?: string;
+  modelPropName?: string | string[];
   /**
    * 所有表单项的wrapper样式
    */
@@ -626,8 +627,8 @@ export interface FormSchema<
   dependencies?: FormItemDependencies;
   /** 描述 */
   description?: string;
-  /** 字段名，也作为自定义插槽的名称 */
-  fieldName: string;
+  /** 字段名，也作为自定义插槽的名称。传数组时一个控件绑定多个字段，第 0 项为主字段 */
+  fieldName: string | string[];
   /** 帮助信息 */
   help?: string | ((ctx: FormSchemaContext<TValues>) => Component | string);
   /** 是否隐藏表单项 */
@@ -668,6 +669,32 @@ type FormValueFormat = (
 - `setValue(fieldName, value)`：用于把一个字段拆分写入其他字段
 
 :::
+
+### 一个控件绑定多个字段
+
+有些接口要求同时提交选项的 id 和展示文本（value 存 id、label 存文本）。这时把 `fieldName` 写成数组即可，不需要额外的 `onUpdate:label` + `dependencies` 手工同步：
+
+```ts
+{
+  component: 'ApiSelect',
+  componentProps: {
+    api: fetchClients,
+    labelField: 'name',
+    valueField: 'id',
+  },
+  // clientId 绑主模型（这里是 v-model:value），mark 绑 v-model:label
+  fieldName: ['clientId', 'mark'],
+  label: '客户',
+  rules: 'selectRequired',
+}
+```
+
+- 第 0 项是主字段，走 `modelPropName`（或适配器的 `baseModelPropName` / `modelPropNameMap`）指定的主模型
+- 其余字段依次绑定附加模型，默认第 1 项使用 `label`；只有需要绑定第三个模型时才需要把 `modelPropName` 写成数组，例如 `modelPropName: ['value', 'label', 'extra']`
+- 校验、错误提示、字段插槽名和 `getFieldComponentRef` 都以第 0 项为准
+- `setValues`、`getValues`、`handleValuesChange` 会把数组里的每个名字都当作 schema 字段，因此 `setValues({ clientId, mark })` 不会被字段过滤丢掉 `mark`
+
+配合 `ApiSelect`（即 [ApiComponent](./vben-api-component#同时绑定-label-和-value)）时，选中后会从选项中反查文本写入第 1 个字段；详情回显时即使选项里已经没有当前值，界面也会显示回填的文本而不是裸 id。完整示例见 Playground 的「Label + Value 绑定」页面。
 
 ### 表单联动
 

@@ -8,6 +8,7 @@ import type {
   FormItemDependenciesLegacy,
   FormSchema,
   FormSchemaContext,
+  FormSchemaFieldName,
   MaybeComponentProps,
 } from '../types';
 
@@ -17,12 +18,17 @@ import {
   mergeWithArrayOverride,
 } from '@vben-core/shared/utils';
 
-import { resolveChildUpdateFieldName } from '../field-name';
+import {
+  resolveChildUpdateFieldName,
+  resolveFieldNameList,
+  resolvePrimaryFieldName,
+} from '../field-name';
 
 type AnyFormSchema = FormSchema<BaseFormComponentType, Record<string, any>>;
 
 export type NormalizedFormFieldSchema = FormFieldProps & {
   commonComponentProps: MaybeComponentProps;
+  fieldNames: string[];
   formFieldProps: Record<string, any>;
   formItemClass: string;
 };
@@ -208,7 +214,9 @@ function createArrayComponentProps(
   if (isFunction(componentProps)) {
     return () => ({
       ...arrayProps,
-      ...componentProps({ fieldName: schema.fieldName }),
+      ...componentProps({
+        fieldName: resolvePrimaryFieldName(schema.fieldName),
+      }),
       commonConfig,
       globalCommonConfig,
       ...schemaProps,
@@ -246,7 +254,7 @@ interface FormArraySchemaLike {
 }
 
 interface UpdatableFormSchemaLike extends FormArraySchemaLike {
-  fieldName: string;
+  fieldName: FormSchemaFieldName;
 }
 
 function setSchemaChildren<TSchema extends UpdatableFormSchemaLike>(
@@ -312,11 +320,19 @@ export function updateFormSchemaList<TSchema extends UpdatableFormSchemaLike>(
   updated: Partial<TSchema>[],
 ): TSchema[] {
   return currentSchema.map((schema) => {
+    const primaryFieldName = resolvePrimaryFieldName(schema.fieldName);
     const exactUpdatedData = updated.find(
-      (item) => item.fieldName === schema.fieldName,
+      (item) =>
+        item.fieldName !== undefined &&
+        resolvePrimaryFieldName(item.fieldName) === primaryFieldName,
     );
     if (exactUpdatedData) {
-      return mergeWithArrayOverride(exactUpdatedData, schema) as TSchema;
+      // 主字段名只是匹配键；更新项未显式给出字段名数组时，保留 schema 原有的多字段绑定
+      const patch = { ...exactUpdatedData };
+      if (!Array.isArray(patch.fieldName)) {
+        Reflect.deleteProperty(patch, 'fieldName');
+      }
+      return mergeWithArrayOverride(patch, schema) as TSchema;
     }
 
     const children = getFormArraySchemaChildren<TSchema>(schema);
@@ -325,7 +341,10 @@ export function updateFormSchemaList<TSchema extends UpdatableFormSchemaLike>(
     }
     const childUpdates = updated.flatMap((item) => {
       const fieldName = item.fieldName
-        ? resolveChildUpdateFieldName(schema.fieldName, item.fieldName)
+        ? resolveChildUpdateFieldName(
+            primaryFieldName,
+            resolvePrimaryFieldName(item.fieldName),
+          )
         : undefined;
       return fieldName ? [{ ...item, fieldName } as Partial<TSchema>] : [];
     });
@@ -367,8 +386,10 @@ export function createFormFieldSchema(
   const normalizedSchema = isFormArraySchema(schema)
     ? createArrayFieldSchema(schema, options)
     : schema;
+  const fieldNames = resolveFieldNameList(normalizedSchema.fieldName);
+  const primaryFieldName = fieldNames[0] ?? '';
   const commonComponentProps = isFunction(componentProps)
-    ? componentProps({ fieldName: normalizedSchema.fieldName })
+    ? componentProps({ fieldName: primaryFieldName })
     : componentProps;
 
   let resolvedSchemaFormItemClass = normalizedSchema.formItemClass;
@@ -392,6 +413,8 @@ export function createFormFieldSchema(
     ...normalizedSchema,
     commonComponentProps,
     componentProps: normalizedSchema.componentProps,
+    fieldName: primaryFieldName,
+    fieldNames,
     controlClass: [controlClass, normalizedSchema.controlClass]
       .filter(Boolean)
       .join(' '),
@@ -421,11 +444,14 @@ export function createArrayChildSchema(
   options: CreateArrayChildSchemaOptions,
 ): NormalizedFormFieldSchema {
   const rowPath = `${options.arrayField}[${options.index}]`;
-  const fieldName = resolveArrayChildFieldName(rowPath, schema.fieldName);
+  // 数组里的每个字段名都要限定到当前行；createFormFieldSchema 会再归一化出主字段
+  const scopedFieldNames = resolveFieldNameList(schema.fieldName).map((name) =>
+    resolveArrayChildFieldName(rowPath, name),
+  );
   const baseContext: FormSchemaContext = {
     arrayField: options.arrayField,
-    fieldName,
-    originalFieldName: schema.fieldName,
+    fieldName: scopedFieldNames[0] ?? '',
+    originalFieldName: resolvePrimaryFieldName(schema.fieldName),
     rowIndex: options.index,
     rowPath,
   };
@@ -435,7 +461,7 @@ export function createArrayChildSchema(
       ...schema,
       componentProps: wrapComponentProps(schema.componentProps, baseContext),
       dependencies: scopeDependencies(schema.dependencies, baseContext),
-      fieldName,
+      fieldName: scopedFieldNames,
       help: wrapCustomParamsRender(schema.help, baseContext),
       renderComponentContent: wrapRenderComponentContent(
         schema.renderComponentContent,

@@ -12,6 +12,7 @@ import { cloneDeep, formatDate, isFunction } from '@vben-core/shared/utils';
 import {
   deleteValueByFieldName,
   getValueByFieldName,
+  resolvePrimaryFieldName,
   resolveValueFormatFieldName,
   setValueByFieldName,
 } from './field-name';
@@ -138,9 +139,10 @@ function applyValueFormatBySchemas<TValues extends FormValues>(
   parentContext?: FormSchemaContext<TValues>,
 ) {
   for (const schema of schemas) {
+    const primaryFieldName = resolvePrimaryFieldName(schema.fieldName);
     const fieldName = parentPath
-      ? resolveArrayChildFieldName(parentPath, schema.fieldName)
-      : schema.fieldName;
+      ? resolveArrayChildFieldName(parentPath, primaryFieldName)
+      : primaryFieldName;
     const row =
       parentPath && parentContext?.rowPath
         ? getValueByFieldName(values, parentContext.rowPath)
@@ -148,7 +150,7 @@ function applyValueFormatBySchemas<TValues extends FormValues>(
     const schemaContext: FormSchemaContext<TValues> = {
       ...parentContext,
       fieldName,
-      originalFieldName: schema.fieldName,
+      originalFieldName: primaryFieldName,
       rootValues: values as TValues,
       row,
     };

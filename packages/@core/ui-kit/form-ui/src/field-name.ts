@@ -1,3 +1,5 @@
+import type { FormSchemaFieldName } from './types';
+
 import { get, isObject, set } from '@vben-core/shared/utils';
 
 export function deleteValueByFieldName(
@@ -58,6 +60,17 @@ export function resolveChildUpdateFieldName(
   return fieldName.slice(closeIndex + 2);
 }
 
+/**
+ * 归一化 schema 的 fieldName：字符串按单字段处理，数组时第 0 项为主字段，
+ * 其余为同一个控件上附加模型（默认第 1 项对应 `v-model:label`）绑定的字段。
+ */
+export function resolveFieldNameList(fieldName: FormSchemaFieldName): string[] {
+  if (!Array.isArray(fieldName)) {
+    return [fieldName];
+  }
+  return fieldName.filter(Boolean);
+}
+
 export function resolveFieldNamePath(fieldName: string) {
   if (fieldName.startsWith('[') && fieldName.endsWith(']')) {
     const rawKey = fieldName.slice(1, -1);
@@ -71,6 +84,16 @@ export function resolveFieldNamePath(fieldName: string) {
     pathSegments: fieldName.match(/[^.[\]]+/g) ?? [],
     rawKey: undefined,
   };
+}
+
+// 每个 schema 都会调用，字符串是绝大多数场景，这里避免分配临时数组
+export function resolvePrimaryFieldName(
+  fieldName: FormSchemaFieldName,
+): string {
+  if (!Array.isArray(fieldName)) {
+    return fieldName;
+  }
+  return fieldName.find(Boolean) ?? '';
 }
 
 export function resolveValueFormatFieldName(

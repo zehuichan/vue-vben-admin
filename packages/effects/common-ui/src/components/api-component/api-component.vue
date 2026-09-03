@@ -8,7 +8,14 @@ import { computed, nextTick, ref, unref, useAttrs, watch } from 'vue';
 
 import { LoaderCircle } from '@vben/icons';
 
-import { cloneDeep, get, isEqual, isFunction } from '@vben-core/shared/utils';
+import {
+  cloneDeep,
+  get,
+  isEmpty,
+  isEqual,
+  isFunction,
+  traverseTreeValues,
+} from '@vben-core/shared/utils';
 
 import { objectOmit } from '@vueuse/core';
 
@@ -42,15 +49,37 @@ const emit = defineEmits<{
 }>();
 
 const modelValue = defineModel<any>({ default: undefined });
+/**
+ * 当前值对应的展示文本。value 存 id、label 存文本，两者一起变更。
+ * 选项未加载时（例如详情回显），外部传入的 label 会作为兜底选项显示。
+ */
+const label = defineModel<any>('label', { default: undefined });
 
 const attrs = useAttrs();
 const usesDefaultModelValue = computed(() => {
   return ['model-value', 'modelValue'].includes(props.modelPropName);
 });
-const currentModelValue = computed(() => {
-  return usesDefaultModelValue.value
-    ? modelValue.value
-    : attrs[props.modelPropName];
+const modelUpdateEvent = computed(() => `onUpdate:${props.modelPropName}`);
+/**
+ * defineModel 只能接管默认的 modelValue，
+ * modelPropName 被改写时读写都要落到 attrs 上。
+ */
+const currentModelValue = computed<any>({
+  get() {
+    return usesDefaultModelValue.value
+      ? modelValue.value
+      : attrs[props.modelPropName];
+  },
+  set(value) {
+    if (usesDefaultModelValue.value) {
+      modelValue.value = value;
+      return;
+    }
+    const updateHandler = attrs[unref(modelUpdateEvent)];
+    if (isFunction(updateHandler)) {
+      updateHandler(value);
+    }
+  },
 });
 const innerParams = ref({});
 const refOptions = ref<OptionsItem[]>([]);
@@ -60,7 +89,7 @@ const isFirstLoaded = ref(false);
 // 标记是否有待处理的请求
 const hasPendingRequest = ref(false);
 
-const getOptions = computed(() => {
+const loadedOptions = computed(() => {
   const {
     labelField,
     labelFn,
@@ -96,14 +125,74 @@ const getOptions = computed(() => {
   return data.length > 0 ? data : transformData(props.options);
 });
 
+// 分组/树形选项时，反查文本需要连同子节点一起展开
+const flatOptions = computed(() => {
+  return traverseTreeValues<OptionsItem, OptionsItem>(
+    unref(loadedOptions),
+    (item) => item,
+  );
+});
+
+function toValueList(value: any): any[] {
+  if (isEmpty(value)) {
+    return [];
+  }
+  return Array.isArray(value) ? value : [value];
+}
+
+// 与被包装组件保持一致的严格匹配：类型不一致（如 numberToString）时走兜底选项回显
+function findOptionLabel(value: any) {
+  return unref(flatOptions).find((item) => item.value === value)?.label;
+}
+
+/**
+ * 外部传入的 value 与 label 的配对。多选时两者都是数组、按位置一一对应，
+ * 这里按 value 建索引，后续反查不再依赖下标，混合了新旧值时也不会错位。
+ */
+const labelByValue = computed(() => {
+  const labels = toValueList(unref(label));
+  const pairs = new Map<any, any>();
+  toValueList(unref(currentModelValue)).forEach((value, index) => {
+    if (!isEmpty(labels[index])) {
+      pairs.set(value, labels[index]);
+    }
+  });
+  return pairs;
+});
+
+// 优先取已加载选项里的文本；选项尚未覆盖当前值时沿用外部传入的 label
+function resolveLabel(value: any) {
+  return findOptionLabel(value) ?? unref(labelByValue).get(value);
+}
+
+/**
+ * 选项尚未覆盖当前值时（例如详情回显先拿到 id 和文本、选项还在请求中），
+ * 用外部传入的 label 补一个兜底选项，避免界面显示裸 id。
+ */
+const fallbackOptions = computed(() => {
+  return toValueList(unref(currentModelValue)).flatMap<OptionsItem>((value) => {
+    if (findOptionLabel(value) !== undefined) {
+      return [];
+    }
+    const fallbackLabel = unref(labelByValue).get(value);
+    return isEmpty(fallbackLabel) ? [] : [{ label: `${fallbackLabel}`, value }];
+  });
+});
+
+const getOptions = computed(() => {
+  const fallback = unref(fallbackOptions);
+  // 没有兜底选项时沿用原数组，避免每次选中都给被包装组件一份新的 options
+  return fallback.length > 0
+    ? [...unref(loadedOptions), ...fallback]
+    : unref(loadedOptions);
+});
+
 const bindProps = computed(() => {
-  const updateEvent = `onUpdate:${props.modelPropName}`;
+  const updateEvent = unref(modelUpdateEvent);
   return {
     [props.modelPropName]: unref(currentModelValue),
     [props.optionsPropName]: unref(getOptions),
-    [updateEvent]: (val: string) => {
-      updateModelValue(val);
-    },
+    [updateEvent]: updateModelValue,
     ...objectOmit(attrs, [props.modelPropName, updateEvent]),
     ...(props.visibleEvent
       ? {
@@ -113,16 +202,49 @@ const bindProps = computed(() => {
   };
 });
 
+/**
+ * label 要和 value 在同一个 tick 内写出去，
+ * 否则表单会先收到一次 label 尚未跟上的中间态。
+ */
 function updateModelValue(value: any) {
-  if (usesDefaultModelValue.value) {
-    modelValue.value = value;
+  syncLabelWithValue(value);
+  currentModelValue.value = value;
+}
+
+function updateLabel(nextLabel: any) {
+  if (isEqual(unref(label), nextLabel)) {
     return;
   }
-  const updateHandler = attrs[`onUpdate:${props.modelPropName}`];
-  if (isFunction(updateHandler)) {
-    updateHandler(value);
-  }
+  label.value = nextLabel;
 }
+
+/**
+ * 按当前值逐项解析展示文本并整体写回，保证 label 始终与 value 一一对应。
+ * 选项还没覆盖某个值时沿用它原有的 label，由 fallbackOptions 负责回显。
+ */
+function syncLabelWithValue(value: any) {
+  if (isEmpty(value)) {
+    updateLabel(undefined);
+    return;
+  }
+  const labels = toValueList(value).map((item) => resolveLabel(item));
+  updateLabel(Array.isArray(value) ? labels : labels[0]);
+}
+
+watch(
+  [flatOptions, currentModelValue],
+  ([, value], previous) => {
+    if (!isEmpty(value)) {
+      syncLabelWithValue(value);
+      return;
+    }
+    // 值被外部清空时 label 一起清空；初始就为空则保留外部传入的 label
+    if (!isEmpty(previous?.[1])) {
+      updateLabel(undefined);
+    }
+  },
+  { immediate: true },
+);
 
 async function fetchApi() {
   const { api, beforeFetch, shouldFetch, afterFetch, resultField } = props;
@@ -210,28 +332,30 @@ watch(
   { deep: true, immediate: props.immediate },
 );
 
+// 兜底选项只服务于界面回显，自动选择与 optionsChange 只看真正加载到的选项
 function emitChange() {
+  const options = unref(loadedOptions);
   if (
     currentModelValue.value === undefined &&
     props.autoSelect &&
-    unref(getOptions).length > 0
+    options.length > 0
   ) {
     let firstOption;
     if (isFunction(props.autoSelect)) {
-      firstOption = props.autoSelect(unref(getOptions));
+      firstOption = props.autoSelect(options);
     } else {
       switch (props.autoSelect) {
         case 'first': {
-          firstOption = unref(getOptions)[0];
+          firstOption = options[0];
           break;
         }
         case 'last': {
-          firstOption = unref(getOptions)[unref(getOptions).length - 1];
+          firstOption = options[options.length - 1];
           break;
         }
         case 'one': {
-          if (unref(getOptions).length === 1) {
-            firstOption = unref(getOptions)[0];
+          if (options.length === 1) {
+            firstOption = options[0];
           }
           break;
         }
@@ -240,14 +364,16 @@ function emitChange() {
 
     if (firstOption) updateModelValue(firstOption.value);
   }
-  emit('optionsChange', unref(getOptions));
+  emit('optionsChange', options);
 }
 const componentRef = ref();
 defineExpose({
-  /** 获取options数据 */
-  getOptions: () => unref(getOptions),
+  /** 获取已加载的options数据 */
+  getOptions: () => unref(loadedOptions),
   /** 获取当前值 */
   getValue: () => unref(currentModelValue),
+  /** 获取当前值对应的展示文本 */
+  getLabel: () => unref(label),
   /** 获取被包装的组件实例 */
   getComponentRef: <T = any>() => componentRef.value as T,
   /** 更新Api参数 */

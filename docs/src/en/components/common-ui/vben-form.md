@@ -278,6 +278,32 @@ Named field slots expose grouped control bindings through `componentProps`, toge
 
 Use a precise form-value interface without a string index signature to infer each field value. A broad type such as `Record<string, unknown>` keeps the complete slot-prop structure instead of degrading the whole scope to `any`, but field values can only use the declared index value type.
 
+## Binding several fields to one control
+
+Some APIs expect both the option id and its display text. Declare the schema `fieldName` as an array instead of syncing a second field by hand through `onUpdate:label` and `dependencies`:
+
+```ts
+{
+  component: 'ApiSelect',
+  componentProps: {
+    api: fetchClients,
+    labelField: 'name',
+    valueField: 'id',
+  },
+  // clientId binds the primary model, mark binds v-model:label
+  fieldName: ['clientId', 'mark'],
+  label: 'Client',
+  rules: 'selectRequired',
+}
+```
+
+- the first entry is the primary field and uses the model prop resolved from `modelPropName` (or the adapter's `baseModelPropName` / `modelPropNameMap`)
+- the remaining entries bind additional models in order; the second entry defaults to `label`, so `modelPropName` only needs to be an array when a third model is involved, for example `modelPropName: ['value', 'label', 'extra']`
+- validation, error messages, the field slot name, and `getFieldComponentRef` all use the first entry
+- `setValues`, `getValues`, and `handleValuesChange` treat every entry as a schema field, so `setValues({ clientId, mark })` is not stripped by field filtering
+
+With `ApiSelect` (that is, [ApiComponent](./vben-api-component#binding-label-and-value-together)) the display text is looked up in the loaded options and written to the second field. When a detail view echoes a value that no longer exists in the options, the control still renders the stored text instead of a raw id.
+
 ## Field Slots
 
 Control bindings are grouped under `componentProps`. It contains the model value, matching `update:*` event, schema/common/dependency props, and disabled state:
@@ -345,6 +371,7 @@ Use benchmark results to compare relative changes on the same machine and runtim
 
 - `useVbenForm` returns `[Form, formApi]`
 - `useVbenForm<TFormValues, TSubmitValues>` keeps component values and submission values distinct
+- `schema.fieldName` accepts an array to bind several fields to one control, with the first entry as the primary field
 - prefer `reset`, `submit`, `validateAndSubmit`, and `clearValidation`
 - `resetForm`, `submitForm`, `validateAndSubmitForm`, and `resetValidate` remain deprecated aliases that warn once in development
 - `clearValidation` invalidates in-flight async results before clearing errors

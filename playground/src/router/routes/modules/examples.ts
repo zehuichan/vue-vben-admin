@@ -119,6 +119,14 @@ const routes: RouteRecordRaw[] = [
             },
           },
           {
+            name: 'FormLabelValueExample',
+            path: 'label-value',
+            component: () => import('#/views/examples/form/label-value.vue'),
+            meta: {
+              title: $t('examples.form.labelValue'),
+            },
+          },
+          {
             name: 'FormArrayDemo',
             path: '/form-array-demo',
             component: () => import('#/views/demos/form-array/index.vue'),

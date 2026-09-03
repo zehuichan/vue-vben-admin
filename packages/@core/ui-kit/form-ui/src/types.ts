@@ -42,6 +42,17 @@ export type FormFieldValue<
   TFieldName extends string,
 > = TFieldName extends keyof TValues ? TValues[TFieldName] : unknown;
 
+/**
+ * schema 上声明的字段名。
+ * - `string`：控件只绑定一个字段
+ * - `string[]`：同一个控件绑定多个字段，第 0 项为主字段（走 `modelPropName`
+ *   指定的主模型），其余依次绑定附加模型，默认第 1 项对应 `v-model:label`
+ *
+ * 这里刻意不引用 `TValues`：`keyof TValues` 会成为 `useVbenForm` 的推断位点，
+ * 让未显式声明泛型的调用把 fieldName 反推成表单值类型。
+ */
+export type FormSchemaFieldName = string | string[];
+
 export type FormLayout = 'horizontal' | 'inline' | 'vertical';
 
 export type BaseFormComponentType =
@@ -567,10 +578,12 @@ export interface FormCommonConfig<TValues extends FormValues = FormValues> {
    */
   labelWidth?: number | string;
   /**
-   * 所有表单项的model属性名
+   * 所有表单项的model属性名。
+   * 传数组时按 `fieldName` 数组的顺序一一对应；只绑定两个字段时无需配置，
+   * 第 1 项默认使用 `label`
    * @default "modelValue"
    */
-  modelPropName?: string;
+  modelPropName?: string | string[];
   /**
    * 所有表单项的wrapper样式
    */
@@ -610,8 +623,11 @@ interface FormSchemaBody<TValues extends FormValues = FormValues> extends Omit<
   dependencies?: FormItemDependencies<TValues>;
   /** 描述 */
   description?: CustomRenderType;
-  /** 字段名 */
-  fieldName: string;
+  /**
+   * 字段名。传数组时同一个控件绑定多个字段，第 0 项为主字段，
+   * 其余依次绑定附加模型（默认第 1 项对应 `v-model:label`）
+   */
+  fieldName: FormSchemaFieldName;
   /** 帮助信息 */
   help?: CustomParamsRenderType<TValues>;
   /** 是否隐藏表单项 */
@@ -755,11 +771,15 @@ export type ArrayToStringFields = Array<
 export interface FormFieldProps<
   T extends BaseFormComponentType = BaseFormComponentType,
   TValues extends FormValues = FormValues,
-> extends FormSchemaBody<TValues> {
+> extends Omit<FormSchemaBody<TValues>, 'fieldName'> {
   /** 组件 */
   component: Component | T;
   /** 组件参数 */
   componentProps?: ComponentProps<TValues>;
+  /** 主字段名，即 `fieldNames` 的第 0 项 */
+  fieldName: string;
+  /** 归一化后的字段名列表，第 0 项为主字段 */
+  fieldNames?: string[];
 }
 
 export interface FormRenderProps<

@@ -27,7 +27,8 @@
     "crop-image": "Crop image",
     "upload-image": "Click to upload image",
     "collapsible": "Collapsible Form Field",
-    "labelWidth": "Label Auto Width"
+    "labelWidth": "Label Auto Width",
+    "labelValue": "Label + Value Binding"
   },
   "vxeTable": {
     "title": "Vxe Table",

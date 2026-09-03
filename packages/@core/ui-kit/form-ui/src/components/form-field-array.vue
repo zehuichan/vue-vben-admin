@@ -12,6 +12,7 @@ import {
 } from '@vben-core/shadcn-ui';
 import { cn, get, set } from '@vben-core/shared/utils';
 
+import { resolvePrimaryFieldName } from '../field-name';
 import { injectRenderFormProps } from '../form-render/context';
 import FormField from '../form-render/form-field.vue';
 import { createArrayChildSchema } from '../form-render/schema';
@@ -105,7 +106,7 @@ function buildDefaultRow(): Record<string, any> {
     } else if ('type' in col && col.type === 'array') {
       value = [];
     }
-    set(row, col.fieldName, value);
+    set(row, resolvePrimaryFieldName(col.fieldName), value);
   });
   return row;
 }
@@ -156,7 +157,7 @@ const normalizedRowSchemas = computed(() =>
         </div>
         <div
           v-for="col in schema"
-          :key="col.fieldName"
+          :key="resolvePrimaryFieldName(col.fieldName)"
           class="text-muted-foreground px-2 py-2 text-left text-sm font-normal"
         >
           <VbenRenderContent :content="col.label" />

@@ -8,6 +8,7 @@ import { computed, reactive, toRaw, toRefs } from 'vue';
 
 import { cn, isString } from '@vben-core/shared/utils';
 
+import { resolvePrimaryFieldName } from '../field-name';
 import { provideFormRenderProps } from './context';
 import { useExpandable } from './expandable';
 import FormField from './form-field.vue';
@@ -50,7 +51,7 @@ const { isCalculated, keepFormItemIndex, wrapperRef } = useExpandable(props);
 const shapes = computed(() => {
   const resultShapes: FormShape[] = [];
   props.schema?.forEach((schema) => {
-    const { fieldName } = schema;
+    const fieldName = resolvePrimaryFieldName(schema.fieldName);
     const rules = toRaw(schema.rules) as ZodType;
 
     const baseRules = getBaseRules(rules) as ZodType;

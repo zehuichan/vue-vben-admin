@@ -26,7 +26,11 @@ import {
 } from '@vben-core/shared/utils';
 
 import { warnDeprecatedOnce } from './deprecation';
-import { resolveFieldNamePath } from './field-name';
+import {
+  resolveFieldNameList,
+  resolveFieldNamePath,
+  resolvePrimaryFieldName,
+} from './field-name';
 import { decodeFormValues, encodeFormValues } from './form-codec';
 import { updateFormSchemaList } from './form-render/schema';
 import { formatFormValues } from './form-value-transform';
@@ -362,7 +366,12 @@ export class FormApi<
     const fieldSet = new Set(fields);
     const schema = this.state?.schema ?? [];
 
-    const filterSchema = schema.filter((item) => !fieldSet.has(item.fieldName));
+    const filterSchema = schema.filter(
+      (item) =>
+        !resolveFieldNameList(item.fieldName).some((fieldName) =>
+          fieldSet.has(fieldName),
+        ),
+    );
 
     this.setState({
       schema: filterSchema,
@@ -512,8 +521,10 @@ export class FormApi<
       ]),
     );
 
-    const schemaFieldPaths = (this.state?.schema ?? []).map(
-      (schema) => resolveFieldNamePath(schema.fieldName).pathSegments,
+    const schemaFieldPaths = (this.state?.schema ?? []).flatMap((schema) =>
+      resolveFieldNameList(schema.fieldName).map(
+        (fieldName) => resolveFieldNamePath(fieldName).pathSegments,
+      ),
     );
     const filterValue = (
       value: unknown,
@@ -660,16 +671,18 @@ export class FormApi<
     // 进行了删除schema操作
     if (currentSchema.length < prevSchema.length) {
       const currentFields = new Set(
-        currentSchema.map((item) => item.fieldName),
+        currentSchema.map((item) => resolvePrimaryFieldName(item.fieldName)),
       );
       const deletedSchema = prevSchema.filter(
-        (item) => !currentFields.has(item.fieldName),
+        (item) => !currentFields.has(resolvePrimaryFieldName(item.fieldName)),
       );
       for (const schema of deletedSchema) {
-        this.form?.setFieldValue?.(
-          schema.fieldName,
-          undefined as FormFieldValue<TFormValues, string>,
-        );
+        for (const fieldName of resolveFieldNameList(schema.fieldName)) {
+          this.form?.setFieldValue?.(
+            fieldName,
+            undefined as FormFieldValue<TFormValues, string>,
+          );
+        }
       }
     }
   }

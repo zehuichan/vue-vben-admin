@@ -59,6 +59,7 @@ const {
   disabled,
   emptyStateValue,
   fieldName,
+  fieldNames,
   formFieldProps,
   hide,
   label,
@@ -85,6 +86,9 @@ if (!formApi) {
 }
 const error = formApi.useFieldError(fieldName);
 const fieldValue = formApi.useFieldValue(fieldName);
+// fieldName 传数组时，第 0 项绑主模型，其余依次绑定附加模型
+const extraFieldNames = fieldNames?.slice(1) ?? [];
+const extraFieldValues = formApi.useFieldValues(extraFieldNames);
 const compact = computed(() => formRenderProps.compact);
 const isInValid = computed(() => Boolean(error.value));
 const shouldApplyInvalidStyle = computed(() => {
@@ -348,12 +352,51 @@ function createFieldSlotProps(slotProps: RuntimeFieldSlotProps) {
   };
 }
 
-function resolveModelPropName() {
+function resolvePrimaryModelPropName() {
+  const configured = Array.isArray(modelPropName)
+    ? modelPropName[0]
+    : modelPropName;
   return (
-    modelPropName ||
+    configured ||
     (isString(component) ? componentBindEventMap.value?.[component] : null)
   );
 }
+
+/**
+ * 附加模型的属性名与 fieldName 数组按位置对应，取自 modelPropName 数组的同一位置；
+ * 只绑定 value + label 时无需配置，第 1 项默认使用 `label`。
+ */
+function resolveExtraModelPropNames() {
+  return extraFieldNames.map((extraFieldName, index) => {
+    const modelIndex = index + 1;
+    const configured = Array.isArray(modelPropName)
+      ? modelPropName[modelIndex]
+      : undefined;
+    const resolved = configured || (modelIndex === 1 ? 'label' : undefined);
+    if (!resolved) {
+      console.warn(
+        `Field ${fieldName} is missing a modelPropName for the extra field ${extraFieldName}`,
+      );
+    }
+    return resolved;
+  });
+}
+const extraModelPropNames = resolveExtraModelPropNames();
+
+const extraModelBinds = computed(() => {
+  const binds: Record<string, any> = {};
+  extraFieldNames.forEach((extraFieldName, index) => {
+    const extraModelPropName = extraModelPropNames[index];
+    if (!extraModelPropName) {
+      return;
+    }
+    binds[extraModelPropName] = extraFieldValues.value[index];
+    binds[`onUpdate:${extraModelPropName}`] = (value: any) => {
+      void getFormApi().setFieldValue(extraFieldName, value);
+    };
+  });
+  return binds;
+});
 
 function fieldBindEvent(
   componentField: Record<string, any>,
@@ -395,7 +438,7 @@ function fieldBindEvent(
 
 function createComponentProps(slotProps: RuntimeFieldSlotProps) {
   const normalizedSlotProps = createFieldSlotProps(slotProps);
-  const bindEventField = resolveModelPropName();
+  const bindEventField = resolvePrimaryModelPropName();
   const bindEvents = fieldBindEvent(
     normalizedSlotProps.componentField,
     bindEventField,
@@ -405,6 +448,7 @@ function createComponentProps(slotProps: RuntimeFieldSlotProps) {
     ...computedProps.value,
     ...normalizedSlotProps.componentField,
     ...bindEvents,
+    ...extraModelBinds.value,
     disabled: shouldDisabled.value,
     ...(Reflect.has(computedProps.value, 'onChange')
       ? { onChange: computedProps.value.onChange }
@@ -421,13 +465,15 @@ function createComponentProps(slotProps: RuntimeFieldSlotProps) {
   // 合并完成后统一剥离与 <form> 固有属性冲突的 name（含用户 binds 显式传入的值），
   // 防止 <input name="nodeName"> 劫持 form.nodeName 访问器（issue #8214）；
   // 不冲突的 name（无论生成还是绑定来源）原样保留。
-  // 边界：fieldBindEvent 产出过 name 键时，binds.name 是模型数据绑定
+  // 边界：fieldBindEvent 或附加模型产出过 name 键时，binds.name 是模型数据绑定
   // （modelPropName / modelPropNameMap 显式解析为 'name'），承载的是表单数据
   // 而非原生属性，即便其值与 <form> 固有属性同名也不得剥离。
   // 边界：组件把 name 声明为语义 prop 时（含字符串组件名经 componentMap
   // 解析出的组件），binds.name 是组件 prop 而非原生 fallthrough 属性，
   // 同样不剥离；未注册的字符串组件按未声明处理。
-  const nameIsModelBinding = Reflect.has(bindEvents, 'name');
+  const nameIsModelBinding =
+    Reflect.has(bindEvents, 'name') ||
+    Reflect.has(extraModelBinds.value, 'name');
   if (
     !nameIsModelBinding &&
     !declaresNameProp(FieldComponent.value) &&
