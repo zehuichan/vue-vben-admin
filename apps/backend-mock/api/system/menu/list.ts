@@ -1,13 +1,17 @@
 import { eventHandler } from 'h3';
-import { verifyAccessToken } from '~/utils/jwt-utils';
-import { MOCK_MENU_LIST } from '~/utils/mock-data';
-import { unAuthorizedResponse, useResponseSuccess } from '~/utils/response';
+import { useResponseSuccess } from '~/utils/response';
+import { getTenantMenuCatalog } from '~/utils/tenant-scope';
+import { verifyTenantAccess } from '~/utils/tenant-utils';
 
+/**
+ * Also feeds the role permission tree, so regular tenants only get the menus
+ * their package grants.
+ */
 export default eventHandler(async (event) => {
-  const userinfo = verifyAccessToken(event);
-  if (!userinfo) {
-    return unAuthorizedResponse(event);
+  const access = verifyTenantAccess(event);
+  if (access.response) {
+    return access.response;
   }
 
-  return useResponseSuccess(MOCK_MENU_LIST);
+  return useResponseSuccess(getTenantMenuCatalog(access.userinfo.tenantCode));
 });

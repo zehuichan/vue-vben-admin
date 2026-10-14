@@ -32,6 +32,8 @@ export namespace SystemMenuApi {
     component?: string;
     /** 菜单ID */
     id: string;
+    /** 平台专属菜单，不能分配给租户套餐 */
+    platformOnly?: boolean;
     /** 菜单元数据 */
     meta?: {
       /** 激活时显示的图标 */

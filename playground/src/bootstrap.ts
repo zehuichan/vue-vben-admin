@@ -17,6 +17,7 @@ import { router } from '#/router';
 import { initComponentAdapter } from './adapter/component';
 import { initSetupVbenForm, useVbenForm } from './adapter/form';
 import App from './app.vue';
+import { initTenant } from './tenant-init';
 import { initTimezone } from './timezone-init';
 
 async function bootstrap(namespace: string) {
@@ -61,6 +62,9 @@ async function bootstrap(namespace: string) {
 
   // 配置 pinia-tore
   await initStores(app, { namespace });
+
+  // 初始化多租户
+  initTenant();
 
   // 初始化时区HANDLER
   initTimezone();

@@ -1,17 +1,13 @@
 import { eventHandler, readBody, setResponseStatus } from 'h3';
-import { verifyAccessToken } from '~/utils/jwt-utils';
 import { TIME_ZONE_OPTIONS } from '~/utils/mock-data';
-import {
-  unAuthorizedResponse,
-  useResponseError,
-  useResponseSuccess,
-} from '~/utils/response';
+import { useResponseError, useResponseSuccess } from '~/utils/response';
+import { verifyTenantAccess } from '~/utils/tenant-utils';
 import { setTimezone } from '~/utils/timezone-utils';
 
 export default eventHandler(async (event) => {
-  const userinfo = verifyAccessToken(event);
-  if (!userinfo) {
-    return unAuthorizedResponse(event);
+  const access = verifyTenantAccess(event);
+  if (access.response) {
+    return access.response;
   }
   const body = await readBody<{ timezone?: unknown }>(event);
   const timezone =

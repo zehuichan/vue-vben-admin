@@ -5,6 +5,8 @@
     "list": "User List",
     "name": "User",
     "userName": "User Name",
+    "realName": "Real Name",
+    "tenants": "Tenants",
     "id": "User ID",
     "dept": "Department",
     "status": "Status",

@@ -34,6 +34,7 @@ const routes: RouteRecordRaw[] = [
         path: 'menu',
         name: 'SystemMenu',
         meta: {
+          authority: ['super'],
           icon: 'mdi:menu',
           title: $t('system.menu.title'),
         },

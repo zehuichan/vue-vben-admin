@@ -16,7 +16,7 @@ export function useFormSchema(): VbenFormSchema[] {
     {
       component: 'Input',
       fieldName: 'name',
-      label: $t('system.user.name'),
+      label: $t('system.user.realName'),
       rules: 'required',
     },
     {
@@ -97,8 +97,13 @@ export function useDescriptionItems(
 ): DescriptionsItemType[] {
   const enabled = row?.status === 1;
   return [
-    { label: $t('system.user.name'), content: row?.name },
+    { label: $t('system.user.name'), content: row?.username },
+    { label: $t('system.user.realName'), content: row?.name },
     { label: $t('system.user.id'), content: row?.id },
+    {
+      label: $t('system.user.tenants'),
+      content: row?.tenants?.map((tenant) => tenant.name).join(', ') || '-',
+    },
     { label: $t('system.user.dept'), content: row?.deptId },
     {
       label: $t('system.user.status'),
@@ -124,14 +129,25 @@ export function useColumns<T = SystemUserApi.SystemUser>(
 ): VxeTableGridColumns {
   return [
     {
-      field: 'name',
+      field: 'username',
       title: $t('system.user.name'),
-      width: 200,
+      width: 140,
+    },
+    {
+      field: 'name',
+      title: $t('system.user.realName'),
+      width: 140,
     },
     {
       field: 'id',
       title: $t('system.user.id'),
-      width: 200,
+      width: 100,
+    },
+    {
+      field: 'tenants',
+      minWidth: 200,
+      slots: { default: 'tenants' },
+      title: $t('system.user.tenants'),
     },
     {
       cellRender: {

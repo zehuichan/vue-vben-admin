@@ -11,7 +11,7 @@ import { onMounted, ref, watch } from 'vue';
 import { Page, Tree, useVbenDrawer } from '@vben/common-ui';
 import { Plus } from '@vben/icons';
 
-import { Button, Card, InputSearch, message, Modal } from 'antdv-next';
+import { Button, Card, InputSearch, message, Modal, Tag } from 'antdv-next';
 
 import { useVbenVxeGrid, VbenTableAction } from '#/adapter/vxe-table';
 import { deleteUser, getDeptList, getUserList, updateUser } from '#/api';
@@ -224,6 +224,14 @@ watch(inputSearchValue, (value) => {
               <Plus class="size-5" />
               {{ $t('ui.actionTitle.create', [$t('system.user.name')]) }}
             </Button>
+          </template>
+          <template #tenants="{ row }">
+            <Tag v-for="tenant in row.tenants" :key="tenant.code">
+              {{ tenant.name }}
+            </Tag>
+            <span v-if="!row.tenants?.length" class="text-foreground/50">
+              -
+            </span>
           </template>
           <template #action="{ row }">
             <VbenTableAction

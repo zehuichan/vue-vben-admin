@@ -108,6 +108,17 @@
           "success": "Success",
           "warning": "Warning"
         }
+      },
+      "tenantMode": {
+        "label": "Multi-Tenant Mode",
+        "tip": "auto: subdomain > path prefix > login select; single: disable multi-tenant. Refresh after changing.",
+        "options": {
+          "auto": "Auto (recommended)",
+          "subdomain": "Subdomain only",
+          "path": "Path prefix only",
+          "select": "Login select / header switch only",
+          "single": "Single tenant (off)"
+        }
       }
     }
   },

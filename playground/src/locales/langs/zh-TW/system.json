@@ -5,6 +5,8 @@
     "list": "使用者列表",
     "name": "使用者名稱",
     "userName": "使用者名稱",
+    "realName": "姓名",
+    "tenants": "所屬租戶",
     "id": "使用者ID",
     "dept": "部門",
     "status": "狀態",

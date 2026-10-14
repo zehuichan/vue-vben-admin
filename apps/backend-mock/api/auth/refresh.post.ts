@@ -5,7 +5,7 @@ import {
   setRefreshTokenCookie,
 } from '~/utils/cookie-utils';
 import { generateAccessToken, verifyRefreshToken } from '~/utils/jwt-utils';
-import { MOCK_USERS } from '~/utils/mock-data';
+import { findMembership, findUser, isTenantAvailable } from '~/utils/mock-data';
 import { forbiddenResponse } from '~/utils/response';
 
 export default defineEventHandler(async (event) => {
@@ -21,13 +21,16 @@ export default defineEventHandler(async (event) => {
     return forbiddenResponse(event);
   }
 
-  const findUser = MOCK_USERS.find(
-    (item) => item.username === userinfo.username,
-  );
-  if (!findUser) {
+  const user = findUser(userinfo.username);
+  if (
+    !user ||
+    !findMembership(user.username, userinfo.tenantCode) ||
+    !isTenantAvailable(userinfo.tenantCode)
+  ) {
     return forbiddenResponse(event);
   }
-  const accessToken = generateAccessToken(findUser);
+
+  const accessToken = generateAccessToken(user, userinfo.tenantCode);
 
   setRefreshTokenCookie(event, refreshToken);
 

@@ -4,12 +4,14 @@ export namespace AuthApi {
   /** 登录接口参数 */
   export interface LoginParams {
     password?: string;
+    tenantCode?: string;
     username?: string;
   }
 
   /** 登录接口返回值 */
   export interface LoginResult {
     accessToken: string;
+    tenantCode?: string;
   }
 
   export interface RefreshTokenResult {

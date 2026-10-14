@@ -108,6 +108,17 @@
           "success": "成功",
           "warning": "警告"
         }
+      },
+      "tenantMode": {
+        "label": "多租户模式",
+        "tip": "auto：子域名 > 路径前缀 > 登录选择；single：关闭多租户。修改后请刷新页面。",
+        "options": {
+          "auto": "自动（推荐）",
+          "subdomain": "仅子域名",
+          "path": "仅路径前缀",
+          "select": "仅登录选择/顶栏切换",
+          "single": "单租户（关闭）"
+        }
       }
     }
   },

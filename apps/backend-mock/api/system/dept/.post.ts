@@ -1,15 +1,11 @@
 import { eventHandler } from 'h3';
-import { verifyAccessToken } from '~/utils/jwt-utils';
-import {
-  sleep,
-  unAuthorizedResponse,
-  useResponseSuccess,
-} from '~/utils/response';
+import { sleep, useResponseSuccess } from '~/utils/response';
+import { verifyTenantAccess } from '~/utils/tenant-utils';
 
 export default eventHandler(async (event) => {
-  const userinfo = verifyAccessToken(event);
-  if (!userinfo) {
-    return unAuthorizedResponse(event);
+  const access = verifyTenantAccess(event);
+  if (access.response) {
+    return access.response;
   }
   await sleep(600);
   return useResponseSuccess(null);

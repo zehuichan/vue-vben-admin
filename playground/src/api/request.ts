@@ -17,7 +17,7 @@ import { cloneDeep } from '@vben/utils';
 import { message } from 'antdv-next';
 import JSONBigInt from 'json-bigint';
 
-import { useAuthStore } from '#/store';
+import { useAuthStore, useTenantStore } from '#/store';
 
 import { refreshTokenApi } from './core';
 
@@ -78,9 +78,13 @@ function createRequestClient(baseURL: string, options?: RequestClientOptions) {
   client.addRequestInterceptor({
     fulfilled: async (config) => {
       const accessStore = useAccessStore();
+      const tenantStore = useTenantStore();
 
       config.headers.Authorization = formatToken(accessStore.accessToken);
       config.headers['Accept-Language'] = preferences.app.locale;
+      if (tenantStore.enabled && tenantStore.tenantCode) {
+        config.headers['X-Tenant-Id'] = tenantStore.tenantCode;
+      }
       return config;
     },
   });

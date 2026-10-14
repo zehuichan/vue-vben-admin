@@ -108,6 +108,17 @@
           "success": "成功",
           "warning": "警告"
         }
+      },
+      "tenantMode": {
+        "label": "多租戶模式",
+        "tip": "auto：子網域 > 路徑前綴 > 登入選擇；single：關閉多租戶。修改後請重新整理頁面。",
+        "options": {
+          "auto": "自動（推薦）",
+          "subdomain": "僅子網域",
+          "path": "僅路徑前綴",
+          "select": "僅登入選擇/頂欄切換",
+          "single": "單租戶（關閉）"
+        }
       }
     }
   },

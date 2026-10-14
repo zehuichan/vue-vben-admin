@@ -1,45 +1,54 @@
-import { faker } from '@faker-js/faker';
 import { eventHandler, getQuery } from 'h3';
-import { verifyAccessToken } from '~/utils/jwt-utils';
-import { unAuthorizedResponse, usePageResponseSuccess } from '~/utils/response';
+import {
+  findMembership,
+  MOCK_MEMBERSHIPS,
+  MOCK_TENANTS,
+  MOCK_USERS,
+} from '~/utils/mock-data';
+import { usePageResponseSuccess } from '~/utils/response';
+import { isPlatformTenant } from '~/utils/tenant-scope';
+import { verifyTenantAccess } from '~/utils/tenant-utils';
 
-const formatterCN = new Intl.DateTimeFormat('zh-CN', {
-  timeZone: 'Asia/Shanghai',
-  year: 'numeric',
-  month: '2-digit',
-  day: '2-digit',
-  hour: '2-digit',
-  minute: '2-digit',
-  second: '2-digit',
-});
+/** Display-only fields for the user management list, keyed by username */
+const USER_PROFILES: Record<string, { createTime: string; remark: string }> = {
+  admin: { createTime: '2024-01-02 10:00:00', remark: 'Administrator' },
+  jack: { createTime: '2024-01-03 11:00:00', remark: 'Regular user' },
+  vben: { createTime: '2024-01-01 09:00:00', remark: 'Super administrator' },
+};
 
-function generateMockDataList(count: number) {
-  const dataList = [];
-
-  for (let i = 0; i < count; i++) {
-    const dataItem: Record<string, any> = {
-      id: faker.string.uuid(),
-      name: faker.commerce.product(),
-      status: faker.helpers.arrayElement([0, 1]),
-      createTime: formatterCN.format(
-        faker.date.between({ from: '2022-01-01', to: '2025-01-01' }),
-      ),
-      deptId: faker.string.uuid(),
-      remark: faker.lorem.sentence(),
-    };
-
-    dataList.push(dataItem);
-  }
-
-  return dataList;
+/**
+ * Regular tenants only see their own members and their roles there. The
+ * platform tenant sees every account plus its memberships, since accounts are
+ * shared across tenants.
+ */
+function getUserListData(tenantCode: string) {
+  const platform = isPlatformTenant(tenantCode);
+  return MOCK_USERS.filter(
+    (user) => platform || !!findMembership(user.username, tenantCode),
+  ).map((user) => ({
+    createTime: USER_PROFILES[user.username]?.createTime ?? '',
+    id: String(user.id),
+    name: user.realName,
+    remark: USER_PROFILES[user.username]?.remark ?? '',
+    roles: findMembership(user.username, tenantCode)?.roles ?? [],
+    status: 1,
+    tenants: platform
+      ? MOCK_TENANTS.filter((tenant) =>
+          MOCK_MEMBERSHIPS.some(
+            (item) =>
+              item.username === user.username &&
+              item.tenantCode === tenant.code,
+          ),
+        ).map(({ code, name }) => ({ code, name }))
+      : undefined,
+    username: user.username,
+  }));
 }
 
-const mockData = generateMockDataList(100);
-
 export default eventHandler(async (event) => {
-  const userinfo = verifyAccessToken(event);
-  if (!userinfo) {
-    return unAuthorizedResponse(event);
+  const access = verifyTenantAccess(event);
+  if (access.response) {
+    return access.response;
   }
 
   const {
@@ -50,36 +59,33 @@ export default eventHandler(async (event) => {
     remark,
     startTime,
     endTime,
-    deptId,
     status,
   } = getQuery(event);
-  let listData = structuredClone(mockData);
+  let listData = getUserListData(access.userinfo.tenantCode);
   if (name) {
-    listData = listData.filter((item) =>
-      item.name.toLowerCase().includes(String(name).toLowerCase()),
+    const keyword = String(name).toLowerCase();
+    listData = listData.filter(
+      (item) =>
+        item.name.toLowerCase().includes(keyword) ||
+        item.username.toLowerCase().includes(keyword),
     );
   }
   if (id) {
-    listData = listData.filter((item) =>
-      item.id.toLowerCase().includes(String(id).toLowerCase()),
-    );
+    listData = listData.filter((item) => item.id === String(id));
   }
   if (remark) {
     listData = listData.filter((item) =>
-      item.remark?.toLowerCase()?.includes(String(remark).toLowerCase()),
+      item.remark.toLowerCase().includes(String(remark).toLowerCase()),
     );
   }
   if (startTime) {
-    listData = listData.filter((item) => item.createTime >= startTime);
+    listData = listData.filter((item) => item.createTime >= String(startTime));
   }
   if (endTime) {
-    listData = listData.filter((item) => item.createTime <= endTime);
+    listData = listData.filter((item) => item.createTime <= String(endTime));
   }
   if (['0', '1'].includes(status as string)) {
     listData = listData.filter((item) => item.status === Number(status));
-  }
-  if (deptId) {
-    listData = listData.filter((item) => item.deptId === deptId);
   }
   return usePageResponseSuccess(page as string, pageSize as string, listData);
 });

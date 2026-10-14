@@ -13,5 +13,10 @@
     "title": "Dashboard",
     "analytics": "Analytics",
     "workspace": "Workspace"
+  },
+  "tenant": {
+    "selectTenant": "Select Tenant",
+    "lockedHint": "Tenant is locked by URL: {tenant}",
+    "unavailable": "Tenant \"{tenant}\" in the URL does not exist, is disabled or has expired"
   }
 }

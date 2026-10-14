@@ -12,6 +12,7 @@ import {
   BasicLayout,
   LockScreen,
   Notification,
+  TenantToggle,
   UserDropdown,
 } from '@vben/layouts';
 import { preferences, usePreferences } from '@vben/preferences';
@@ -19,7 +20,7 @@ import { useAccessStore, useTabbarStore, useUserStore } from '@vben/stores';
 import { openWindow } from '@vben/utils';
 
 import { $t } from '#/locales';
-import { useAuthStore } from '#/store';
+import { useAuthStore, useTenantStore } from '#/store';
 import LoginForm from '#/views/_core/authentication/login.vue';
 
 const { setMenuList } = useTabbarStore();
@@ -91,6 +92,7 @@ const notifications = ref<NotificationItem[]>([
 const router = useRouter();
 const userStore = useUserStore();
 const authStore = useAuthStore();
+const tenantStore = useTenantStore();
 const accessStore = useAccessStore();
 const { destroyWatermark, updateWatermark } = useWatermark();
 const { isDark } = usePreferences();
@@ -161,8 +163,6 @@ function remove(id: number | string) {
 function handleMakeAll() {
   notifications.value.forEach((item) => (item.isRead = true));
 }
-
-function handleClickLogo() {}
 
 const viewAll = () => {};
 
@@ -242,9 +242,16 @@ onBeforeMount(() => {
     :avatar
     :text="userStore.userInfo?.realName"
     @clear-preferences-and-logout="handleLogout"
-    @click-logo="handleClickLogo"
     @logout="handleLogout"
   >
+    <template #logo="logoProps">
+      <TenantToggle
+        v-bind="logoProps"
+        :model-value="tenantStore.tenantCode ?? undefined"
+        :tenants="tenantStore.tenantList"
+        @update:model-value="(code) => code && authStore.switchTenant(code)"
+      />
+    </template>
     <template #user-dropdown>
       <UserDropdown
         :avatar

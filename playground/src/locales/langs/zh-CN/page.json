@@ -13,5 +13,10 @@
     "title": "概览",
     "analytics": "分析页",
     "workspace": "工作台"
+  },
+  "tenant": {
+    "selectTenant": "选择租户",
+    "lockedHint": "当前租户已由访问地址锁定：{tenant}",
+    "unavailable": "访问地址对应的租户「{tenant}」不存在、已停用或已过期"
   }
 }

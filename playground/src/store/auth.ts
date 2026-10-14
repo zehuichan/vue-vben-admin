@@ -1,6 +1,8 @@
 import type { Recordable, UserInfo } from '@vben/types';
 
-import { ref } from 'vue';
+import type { TenantApi } from '#/api';
+
+import { nextTick, ref } from 'vue';
 import { useRouter } from 'vue-router';
 
 import { LOGIN_PATH } from '@vben/constants';
@@ -10,12 +12,22 @@ import { resetAllStores, useAccessStore, useUserStore } from '@vben/stores';
 import { notification } from 'antdv-next';
 import { defineStore } from 'pinia';
 
-import { getAccessCodesApi, getUserInfoApi, loginApi, logoutApi } from '#/api';
+import {
+  getAccessCodesApi,
+  getUserInfoApi,
+  loginApi,
+  logoutApi,
+  switchTenantApi,
+} from '#/api';
 import { $t } from '#/locales';
+import { buildTenantUrl } from '#/utils/tenant';
+
+import { useTenantStore } from './tenant';
 
 export const useAuthStore = defineStore('auth', () => {
   const accessStore = useAccessStore();
   const userStore = useUserStore();
+  const tenantStore = useTenantStore();
   const router = useRouter();
 
   const loginLoading = ref(false);
@@ -34,11 +46,17 @@ export const useAuthStore = defineStore('auth', () => {
     let userInfo: null | UserInfo = null;
     try {
       loginLoading.value = true;
-      const { accessToken } = await loginApi(params);
+      if (tenantStore.enabled) {
+        params.tenantCode ||= tenantStore.tenantCode;
+      }
+      const { accessToken, tenantCode } = await loginApi(params);
 
       // 如果成功获取到 accessToken
       if (accessToken) {
         accessStore.setAccessToken(accessToken);
+        if (tenantCode) {
+          tenantStore.setTenantCode(tenantCode);
+        }
 
         // 获取用户信息并存储到 accessStore 中
         const [fetchUserInfoResult, accessCodes] = await Promise.all([
@@ -115,7 +133,57 @@ export const useAuthStore = defineStore('auth', () => {
   async function fetchUserInfo() {
     const userInfo = await getUserInfoApi();
     userStore.setUserInfo(userInfo);
+    syncTenant(userInfo);
     return userInfo;
+  }
+
+  /**
+   * 同步用户信息中的当前租户与可切换的租户列表
+   */
+  function syncTenant(userInfo: UserInfo) {
+    if (!tenantStore.enabled) {
+      return;
+    }
+    const tenants: TenantApi.TenantInfo[] = userInfo.tenants ?? [];
+    tenantStore.setTenantCode(userInfo.tenantCode ?? tenantStore.tenantCode);
+    tenantStore.setTenantList(tenants);
+    tenantStore.setHiddenMenus(userInfo.hiddenMenus ?? []);
+    tenantStore.setTenantInfo(
+      tenants.find((item) => item.code === tenantStore.tenantCode) ?? null,
+    );
+  }
+
+  /**
+   * 切换租户
+   * 换取新 token 后刷新页面重新生成菜单和路由；路径前缀锁定时跳转到目标租户的路径。
+   * 子域名锁定时目标租户不同源、无法共享登录态，只能跳转后重新登录。
+   * @param tenantCode 目标租户编码
+   */
+  async function switchTenant(tenantCode: string) {
+    if (!tenantStore.enabled || tenantCode === tenantStore.tenantCode) {
+      return;
+    }
+
+    if (tenantStore.lockedBy === 'subdomain') {
+      window.location.href = buildTenantUrl(tenantCode, 'subdomain');
+      return;
+    }
+
+    const { accessToken, tenant } = await switchTenantApi({ tenantCode });
+    accessStore.setAccessToken(accessToken);
+    tenantStore.setTenantCode(tenantCode);
+    accessStore.setAccessCodes(await getAccessCodesApi());
+
+    if (tenantStore.lockedBy === 'path') {
+      tenantStore.setTenantInfo(tenant);
+      // 持久化插件在下一个 tick 写入 storage，跳转前需等待写入完成
+      await nextTick();
+      window.location.href = buildTenantUrl(tenantCode, 'path');
+      return;
+    }
+
+    await router.replace(preferences.app.defaultHomePath);
+    router.go(0);
   }
 
   function $reset() {
@@ -128,5 +196,6 @@ export const useAuthStore = defineStore('auth', () => {
     fetchUserInfo,
     loginLoading,
     logout,
+    switchTenant,
   };
 });

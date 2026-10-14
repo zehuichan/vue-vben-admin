@@ -1,15 +1,17 @@
 import { eventHandler } from 'h3';
-import { verifyAccessToken } from '~/utils/jwt-utils';
-import { MOCK_MENUS } from '~/utils/mock-data';
-import { unAuthorizedResponse, useResponseSuccess } from '~/utils/response';
+import { getRoleMenus } from '~/utils/mock-data';
+import { useResponseSuccess } from '~/utils/response';
+import { filterMenusByTenant } from '~/utils/tenant-scope';
+import { verifyTenantAccess } from '~/utils/tenant-utils';
 
 export default eventHandler(async (event) => {
-  const userinfo = verifyAccessToken(event);
-  if (!userinfo) {
-    return unAuthorizedResponse(event);
+  const access = verifyTenantAccess(event);
+  if (access.response) {
+    return access.response;
   }
 
-  const menus =
-    MOCK_MENUS.find((item) => item.username === userinfo.username)?.menus ?? [];
-  return useResponseSuccess(menus);
+  const { userinfo } = access;
+  return useResponseSuccess(
+    filterMenusByTenant(getRoleMenus(userinfo.roles), userinfo.tenantCode),
+  );
 });

@@ -1,16 +1,13 @@
 import { eventHandler } from 'h3';
-import { verifyAccessToken } from '~/utils/jwt-utils';
-import { MOCK_CODES } from '~/utils/mock-data';
-import { unAuthorizedResponse, useResponseSuccess } from '~/utils/response';
+import { getAccessCodes } from '~/utils/mock-data';
+import { useResponseSuccess } from '~/utils/response';
+import { verifyTenantAccess } from '~/utils/tenant-utils';
 
 export default eventHandler((event) => {
-  const userinfo = verifyAccessToken(event);
-  if (!userinfo) {
-    return unAuthorizedResponse(event);
+  const access = verifyTenantAccess(event);
+  if (access.response) {
+    return access.response;
   }
 
-  const codes =
-    MOCK_CODES.find((item) => item.username === userinfo.username)?.codes ?? [];
-
-  return useResponseSuccess(codes);
+  return useResponseSuccess(getAccessCodes(access.userinfo.roles));
 });

@@ -1,7 +1,8 @@
 import { faker } from '@faker-js/faker';
 import { eventHandler } from 'h3';
-import { verifyAccessToken } from '~/utils/jwt-utils';
-import { unAuthorizedResponse, useResponseSuccess } from '~/utils/response';
+import { useResponseSuccess } from '~/utils/response';
+import { getTenantSeed } from '~/utils/tenant-scope';
+import { verifyTenantAccess } from '~/utils/tenant-utils';
 
 const formatterCN = new Intl.DateTimeFormat('zh-CN', {
   timeZone: 'Asia/Shanghai',
@@ -48,15 +49,25 @@ function generateMockDataList(count: number) {
   return dataList;
 }
 
-const mockData = generateMockDataList(10);
+const tenantDeptList = new Map<string, Record<string, any>[]>();
+
+function getTenantDeptList(tenantCode: string) {
+  let deptList = tenantDeptList.get(tenantCode);
+  if (!deptList) {
+    faker.seed(getTenantSeed(tenantCode));
+    deptList = generateMockDataList(faker.number.int({ min: 4, max: 10 }));
+    tenantDeptList.set(tenantCode, deptList);
+  }
+  return deptList;
+}
 
 export default eventHandler(async (event) => {
-  const userinfo = verifyAccessToken(event);
-  if (!userinfo) {
-    return unAuthorizedResponse(event);
+  const access = verifyTenantAccess(event);
+  if (access.response) {
+    return access.response;
   }
 
-  const listData = structuredClone(mockData);
-
-  return useResponseSuccess(listData);
+  return useResponseSuccess(
+    structuredClone(getTenantDeptList(access.userinfo.tenantCode)),
+  );
 });

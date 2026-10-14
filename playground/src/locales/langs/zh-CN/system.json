@@ -5,6 +5,8 @@
     "list": "用户列表",
     "name": "用户名",
     "userName": "用户名称",
+    "realName": "姓名",
+    "tenants": "所属租户",
     "id": "用户ID",
     "dept": "部门",
     "status": "状态",

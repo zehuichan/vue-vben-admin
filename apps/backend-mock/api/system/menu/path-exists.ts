@@ -1,7 +1,7 @@
 import { eventHandler, getQuery } from 'h3';
-import { verifyAccessToken } from '~/utils/jwt-utils';
 import { MOCK_MENU_LIST } from '~/utils/mock-data';
-import { unAuthorizedResponse, useResponseSuccess } from '~/utils/response';
+import { useResponseSuccess } from '~/utils/response';
+import { verifyTenantAccess } from '~/utils/tenant-utils';
 
 const pathMap: Record<string, any> = { '/': 0 };
 
@@ -16,9 +16,9 @@ function getPaths(menus: any[]) {
 getPaths(MOCK_MENU_LIST);
 
 export default eventHandler(async (event) => {
-  const userinfo = verifyAccessToken(event);
-  if (!userinfo) {
-    return unAuthorizedResponse(event);
+  const access = verifyTenantAccess(event);
+  if (access.response) {
+    return access.response;
   }
   const { id, path } = getQuery(event);
 

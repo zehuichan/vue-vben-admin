@@ -1,12 +1,12 @@
 import { eventHandler } from 'h3';
-import { verifyAccessToken } from '~/utils/jwt-utils';
-import { unAuthorizedResponse, useResponseSuccess } from '~/utils/response';
+import { useResponseSuccess } from '~/utils/response';
+import { verifyTenantAccess } from '~/utils/tenant-utils';
 import { getTimezone } from '~/utils/timezone-utils';
 
 export default eventHandler((event) => {
-  const userinfo = verifyAccessToken(event);
-  if (!userinfo) {
-    return unAuthorizedResponse(event);
+  const access = verifyTenantAccess(event);
+  if (access.response) {
+    return access.response;
   }
   return useResponseSuccess(getTimezone());
 });

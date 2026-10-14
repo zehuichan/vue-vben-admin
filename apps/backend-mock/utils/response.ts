@@ -49,6 +49,22 @@ export function forbiddenResponse(
   return useResponseError(message, message);
 }
 
+export function badRequestResponse(
+  event: H3Event<EventHandlerRequest>,
+  message: string,
+) {
+  setResponseStatus(event, 400);
+  return useResponseError('BadRequestException', message);
+}
+
+export function notFoundResponse(
+  event: H3Event<EventHandlerRequest>,
+  message = 'Not Found Exception',
+) {
+  setResponseStatus(event, 404);
+  return useResponseError('NotFoundException', message);
+}
+
 export function unAuthorizedResponse(event: H3Event<EventHandlerRequest>) {
   setResponseStatus(event, 401);
   return useResponseError('Unauthorized Exception', 'Unauthorized Exception');

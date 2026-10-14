@@ -10,6 +10,9 @@ export namespace SystemUserApi {
     permissions: string[];
     remark?: string;
     status: 0 | 1;
+    /** 所属租户，与租户管理中的成员关系一致 */
+    tenants?: Array<{ code: string; name: string }>;
+    username?: string;
   }
 }
 

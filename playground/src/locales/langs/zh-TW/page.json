@@ -13,5 +13,10 @@
     "title": "概覽",
     "analytics": "分析頁",
     "workspace": "工作臺"
+  },
+  "tenant": {
+    "selectTenant": "選擇租戶",
+    "lockedHint": "目前租戶已由造訪位址鎖定：{tenant}",
+    "unavailable": "造訪位址對應的租戶「{tenant}」不存在、已停用或已過期"
   }
 }

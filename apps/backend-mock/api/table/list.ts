@@ -1,11 +1,8 @@
 import { faker } from '@faker-js/faker';
 import { eventHandler, getQuery } from 'h3';
-import { verifyAccessToken } from '~/utils/jwt-utils';
-import {
-  sleep,
-  unAuthorizedResponse,
-  usePageResponseSuccess,
-} from '~/utils/response';
+import { sleep, usePageResponseSuccess } from '~/utils/response';
+import { getTenantSeed } from '~/utils/tenant-scope';
+import { verifyTenantAccess } from '~/utils/tenant-utils';
 
 function generateMockDataList(count: number) {
   const dataList = [];
@@ -38,12 +35,22 @@ function generateMockDataList(count: number) {
   return dataList;
 }
 
-const mockData = generateMockDataList(100);
+const tenantRows = new Map<string, ReturnType<typeof generateMockDataList>>();
+
+function getTenantRows(tenantCode: string) {
+  let rows = tenantRows.get(tenantCode);
+  if (!rows) {
+    faker.seed(getTenantSeed(tenantCode));
+    rows = generateMockDataList(100);
+    tenantRows.set(tenantCode, rows);
+  }
+  return rows;
+}
 
 export default eventHandler(async (event) => {
-  const userinfo = verifyAccessToken(event);
-  if (!userinfo) {
-    return unAuthorizedResponse(event);
+  const access = verifyTenantAccess(event);
+  if (access.response) {
+    return access.response;
   }
 
   await sleep(600);
@@ -60,7 +67,7 @@ export default eventHandler(async (event) => {
     100,
     Math.max(1, Number.parseInt(String(pageSizeRaw ?? '10'), 10) || 10),
   );
-  const listData = structuredClone(mockData);
+  const listData = structuredClone(getTenantRows(access.userinfo.tenantCode));
 
   // 规范化 query 入参，兼容 string[]
   const sortKeyRaw = Array.isArray(sortBy) ? sortBy[0] : sortBy;

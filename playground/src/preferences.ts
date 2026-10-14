@@ -4,11 +4,14 @@ import {
   definePreferencesExtension,
 } from '@vben/preferences';
 
+export type TenantMode = 'auto' | 'path' | 'select' | 'single' | 'subdomain';
+
 interface PlaygroundPreferencesExtension {
   defaultVisibleRows: number;
   enableQuickActions: boolean;
   highlightTone: 'default' | 'success' | 'warning';
   reportTitle: string;
+  tenantMode: TenantMode;
 }
 
 /**
@@ -79,6 +82,40 @@ export const preferencesExtension =
             label:
               'demos.preferencesExtensionConfig.fields.highlightTone.options.warning',
             value: 'warning',
+          },
+        ],
+      },
+      {
+        component: 'select',
+        defaultValue: 'auto',
+        key: 'tenantMode',
+        label: 'demos.preferencesExtensionConfig.fields.tenantMode.label',
+        tip: 'demos.preferencesExtensionConfig.fields.tenantMode.tip',
+        options: [
+          {
+            label:
+              'demos.preferencesExtensionConfig.fields.tenantMode.options.auto',
+            value: 'auto',
+          },
+          {
+            label:
+              'demos.preferencesExtensionConfig.fields.tenantMode.options.subdomain',
+            value: 'subdomain',
+          },
+          {
+            label:
+              'demos.preferencesExtensionConfig.fields.tenantMode.options.path',
+            value: 'path',
+          },
+          {
+            label:
+              'demos.preferencesExtensionConfig.fields.tenantMode.options.select',
+            value: 'select',
+          },
+          {
+            label:
+              'demos.preferencesExtensionConfig.fields.tenantMode.options.single',
+            value: 'single',
           },
         ],
       },
