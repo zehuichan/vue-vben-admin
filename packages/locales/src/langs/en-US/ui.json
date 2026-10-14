@@ -160,6 +160,9 @@
     "timezone": {
       "setTimezone": "Set Timezone",
       "setSuccess": "Timezone set successfully"
+    },
+    "tenant": {
+      "switchTenant": "Switch Tenant"
     }
   }
 }

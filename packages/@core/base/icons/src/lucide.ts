@@ -19,6 +19,7 @@ export {
   ChevronsDown,
   ChevronsLeft,
   ChevronsRight,
+  ChevronsUpDown,
   Circle,
   CircleAlert,
   CircleCheckBig,

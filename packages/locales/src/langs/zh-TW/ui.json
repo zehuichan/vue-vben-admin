@@ -160,6 +160,9 @@
     "timezone": {
       "setTimezone": "設定時區",
       "setSuccess": "時區設定成功"
+    },
+    "tenant": {
+      "switchTenant": "切換租戶"
     }
   }
 }

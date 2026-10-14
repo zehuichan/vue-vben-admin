@@ -156,6 +156,22 @@ const logoTheme = computed(() => {
 });
 
 /**
+ * 传给 VbenLogo 的属性，同时作为 logo 插槽的参数
+ */
+const logoProps = computed(() => ({
+  class: logoClass.value,
+  collapsed: logoCollapsed.value,
+  fit: preferences.logo.fit,
+  fullLogoHeight: preferences.logo.fullLogoHeight,
+  logoMode: preferences.logo.logoMode,
+  showText: preferences.logo.showText,
+  src: finalLogoSrc.value,
+  srcDark: finalLogoSrcDark.value,
+  text: finalLogoText.value,
+  theme: logoTheme.value,
+}));
+
+/**
  * layout-sidebar扩展区域插槽extra-title的高度
  */
 const sidebarExtraTitleHeight = computed<number | undefined>(() => {
@@ -317,24 +333,13 @@ const headerSlots = computed(() => {
   >
     <!-- logo -->
     <template #logo>
-      <VbenLogo
-        v-if="preferences.logo.enable"
-        :fit="preferences.logo.fit"
-        :class="logoClass"
-        :collapsed="logoCollapsed"
-        :src="finalLogoSrc"
-        :src-dark="finalLogoSrcDark"
-        :text="finalLogoText"
-        :show-text="preferences.logo.showText"
-        :logo-mode="preferences.logo.logoMode"
-        :full-logo-height="preferences.logo.fullLogoHeight"
-        :theme="logoTheme"
-        @click="clickLogo"
-      >
-        <template v-if="$slots['logo-text']" #text>
-          <slot name="logo-text"></slot>
-        </template>
-      </VbenLogo>
+      <slot v-if="preferences.logo.enable" name="logo" v-bind="logoProps">
+        <VbenLogo v-bind="logoProps" @click="clickLogo">
+          <template v-if="$slots['logo-text']" #text>
+            <slot name="logo-text"></slot>
+          </template>
+        </VbenLogo>
+      </slot>
     </template>
     <!-- 头部区域 -->
     <template #header>
