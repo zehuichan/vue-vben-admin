@@ -97,6 +97,7 @@ function sidebarGuide(): DefaultTheme.SidebarItem[] {
         { link: 'in-depth/login', text: 'Login' },
         { link: 'in-depth/theme', text: 'Theme' },
         { link: 'in-depth/access', text: 'Access Control' },
+        { link: 'in-depth/multi-tenant', text: 'Multi-Tenancy' },
         { link: 'in-depth/locale', text: 'Internationalization' },
         { link: 'in-depth/features', text: 'Common Features' },
         { link: 'in-depth/check-updates', text: 'Check Updates' },
