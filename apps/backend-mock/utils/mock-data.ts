@@ -141,7 +141,8 @@ export const MOCK_TENANTS: TenantRecord[] = [
 ];
 
 const BASIC_PACKAGE_MENU_IDS = [
-  1, 101, 2, 202, 20_401, 20_402, 20_403, 203, 204, 9, 901, 902, 903, 10,
+  1, 101, 2, 202, 20_401, 20_402, 20_403, 203, 204, 205, 20_501, 20_502, 20_503,
+  9, 901, 902, 903, 10,
 ];
 
 export const MOCK_TENANT_PACKAGES: TenantPackageRecord[] = [
@@ -732,6 +733,49 @@ export const MOCK_MENU_LIST = [
         type: 'menu',
         meta: { icon: 'mdi:account-group', title: 'system.role.title' },
         component: '/system/role/list',
+      },
+      {
+        id: 205,
+        pid: 2,
+        path: '/system/dict',
+        name: 'SystemDict',
+        status: 1,
+        type: 'menu',
+        authCode: 'System:Dict:List',
+        meta: {
+          icon: 'mdi:book-cog-outline',
+          title: 'system.dict.title',
+        },
+        component: '/system/dict/list',
+        children: [
+          {
+            id: 20_501,
+            pid: 205,
+            name: 'SystemDictCreate',
+            status: 1,
+            type: 'button',
+            authCode: 'System:Dict:Create',
+            meta: { title: 'common.create' },
+          },
+          {
+            id: 20_502,
+            pid: 205,
+            name: 'SystemDictEdit',
+            status: 1,
+            type: 'button',
+            authCode: 'System:Dict:Edit',
+            meta: { title: 'common.edit' },
+          },
+          {
+            id: 20_503,
+            pid: 205,
+            name: 'SystemDictDelete',
+            status: 1,
+            type: 'button',
+            authCode: 'System:Dict:Delete',
+            meta: { title: 'common.delete' },
+          },
+        ],
       },
     ],
   },

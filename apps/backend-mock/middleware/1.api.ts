@@ -2,10 +2,11 @@ import { defineEventHandler } from 'h3';
 import { forbiddenResponse, sleep } from '~/utils/response';
 
 /**
- * Writable despite the demo lock: tenant records drive login, switching and
- * isolation, so the multi-tenant demo needs them to actually change.
+ * Writable despite the demo lock. Tenant records drive login, switching and
+ * isolation, and dictionary records stay in memory so the cache-refresh demo
+ * can actually change them.
  */
-const WRITABLE_SYSTEM_PATHS = ['/api/system/tenant'];
+const WRITABLE_SYSTEM_PATHS = ['/api/system/dict', '/api/system/tenant'];
 
 export default defineEventHandler(async (event) => {
   event.node.res.setHeader(

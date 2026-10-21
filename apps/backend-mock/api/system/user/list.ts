@@ -10,10 +10,25 @@ import { isPlatformTenant } from '~/utils/tenant-scope';
 import { verifyTenantAccess } from '~/utils/tenant-utils';
 
 /** Display-only fields for the user management list, keyed by username */
-const USER_PROFILES: Record<string, { createTime: string; remark: string }> = {
-  admin: { createTime: '2024-01-02 10:00:00', remark: 'Administrator' },
-  jack: { createTime: '2024-01-03 11:00:00', remark: 'Regular user' },
-  vben: { createTime: '2024-01-01 09:00:00', remark: 'Super administrator' },
+const USER_PROFILES: Record<
+  string,
+  { createTime: string; gender: 0 | 1 | 2; remark: string }
+> = {
+  admin: {
+    createTime: '2024-01-02 10:00:00',
+    gender: 1,
+    remark: 'Administrator',
+  },
+  jack: {
+    createTime: '2024-01-03 11:00:00',
+    gender: 0,
+    remark: 'Regular user',
+  },
+  vben: {
+    createTime: '2024-01-01 09:00:00',
+    gender: 2,
+    remark: 'Super administrator',
+  },
 };
 
 /**
@@ -27,6 +42,7 @@ function getUserListData(tenantCode: string) {
     (user) => platform || !!findMembership(user.username, tenantCode),
   ).map((user) => ({
     createTime: USER_PROFILES[user.username]?.createTime ?? '',
+    gender: USER_PROFILES[user.username]?.gender ?? 2,
     id: String(user.id),
     name: user.realName,
     remark: USER_PROFILES[user.username]?.remark ?? '',
@@ -59,6 +75,7 @@ export default eventHandler(async (event) => {
     remark,
     startTime,
     endTime,
+    gender,
     status,
   } = getQuery(event);
   let listData = getUserListData(access.userinfo.tenantCode);
@@ -86,6 +103,9 @@ export default eventHandler(async (event) => {
   }
   if (['0', '1'].includes(status as string)) {
     listData = listData.filter((item) => item.status === Number(status));
+  }
+  if (['0', '1', '2'].includes(gender as string)) {
+    listData = listData.filter((item) => item.gender === Number(gender));
   }
   return usePageResponseSuccess(page as string, pageSize as string, listData);
 });
